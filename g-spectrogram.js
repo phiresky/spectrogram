@@ -18,18 +18,18 @@ Polymer('g-spectrogram', {
     this.tempCanvas = document.createElement('canvas'),
     console.log('Created spectrogram');
     // Get input from the microphone.
-    if (navigator.mozGetUserMedia) {
-      navigator.mozGetUserMedia({audio: true},
-                                this.onStream.bind(this),
-                                this.onStreamError.bind(this));
-    } else if (navigator.webkitGetUserMedia) {
-      var constraints = {
-        audio: { optional: [{ echoCancellation: false }] }
-      };
-      navigator.webkitGetUserMedia(constraints,
-                                this.onStream.bind(this),
-                                this.onStreamError.bind(this));
+    if (!navigator.getUserMedia) {
+      navigator.getUserMedia = navigator.mozGetUserMedia || navigator.webkitGetUserMedia;
     }
+    if (!navigator.getUserMedia) {
+        alert("Your browser does not support microphone access. Try Chrome or Firefox");
+    }
+    var constraints = {
+      audio: { optional: [{ echoCancellation: false }] }
+    };
+    navigator.getUserMedia(constraints,
+                           this.onStream.bind(this),
+                           this.onStreamError.bind(this));
     this.ctx = this.$.canvas.getContext('2d');
   },
 
@@ -224,6 +224,7 @@ Polymer('g-spectrogram', {
 
   onStreamError: function(e) {
     console.error(e);
+    alert("Could not access microphone");
   },
 
   getGrayColor: function(value) {
