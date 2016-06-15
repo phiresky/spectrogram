@@ -1,7 +1,7 @@
 <link rel="import" href="./bower_components/polymer/polymer.html">
 
 
-<polymer-element name="g-spectrogram-controls" attributes="log labels ticks speed color minFreq maxFreq">
+<polymer-element name="g-spectrogram-controls" attributes="log logColor labels ticks speed color minFreq maxFreq">
   <template>
     <style>
       :host {
@@ -27,8 +27,12 @@
     </style>
     <h1>Spectrogram Controls</h1>
     <div class="config">
-      <label for="log">Log scale</label>
+      <label for="log">Log frequency scale</label>
       <input type="checkbox" id="log" checked="{{log}}">
+    </div>
+    <div class="config">
+      <label for="logColor">Exponential intensity</label>
+      <input type="checkbox" id="logColor" checked="{{logColor}}">
     </div>
     <div class="config">
       <label for="color">Full color</label>

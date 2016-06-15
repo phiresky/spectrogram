@@ -168,13 +168,11 @@ Polymer('g-oscillator', {
     // Linearly divide the Y axis and assign frequency.
     var percent = 1 - (y / this.height);
     var nyquist = context.sampleRate/2;
-    console.log(percent);
     if (this.log) {
       percent = this.logScale_(percent * 1000, 1000) / 1000;
     }
-    percent = percent * (+this.maxFreq - +this.minFreq) + +this.minFreq;
-    percent /= nyquist;
-    return percent * nyquist;
+    console.log(this.minFreq, this.maxFreq, percent);
+    return percent * (+this.maxFreq - +this.minFreq) + +this.minFreq;
   },
 
   createOscillator_: function() {

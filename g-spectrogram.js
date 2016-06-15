@@ -9,12 +9,14 @@ Polymer('g-spectrogram', {
   controls: false,
   // Log mode.
   log: false,
+  logIntensity: 3,
   // Show axis labels, and how many ticks.
   labels: false,
-  minFreq: 50,
+  minFreq: 4000,
   maxFreq: 16000,
   ticks: 10,
   speed: 2,
+  logColor: false,
   // FFT bin size,
   fftsize: 2048,
   oscillator: false,
@@ -222,8 +224,9 @@ Polymer('g-spectrogram', {
   onStream: function(stream) {
     var input = context.createMediaStreamSource(stream);
     var analyser = context.createAnalyser();
-    analyser.smoothingTimeConstant = 0;
+    analyser.smoothingTimeConstant = 0.2;
     analyser.fftSize = this.fftsize;
+    analyser.minDecibels = -80;
 
     // Connect graph.
     input.connect(analyser);
@@ -239,7 +242,9 @@ Polymer('g-spectrogram', {
   },
 
   getGrayColor: function(value) {
-    return 'rgb(V, V, V)'.replace(/V/g, 255 - value);
+    var percent = (255 - value) / 255;
+    if(this.logColor) percent = Math.expm1(percent * this.logIntensity)/Math.expm1(this.logIntensity);
+    return 'rgb(V, V, V)'.replace(/V/g, (percent * 255)|0);
   },
 
 
@@ -247,6 +252,7 @@ Polymer('g-spectrogram', {
     var fromH = 0;
     var toH = 240;
     var percent = 1 - value / 255;
+    if(this.logColor) percent = Math.expm1(percent * this.logIntensity)/Math.expm1(this.logIntensity);
     var hue = fromH + percent * (toH - fromH);
     return 'hsl(H, 100%, 50%)'.replace(/H/g, hue);
   },
