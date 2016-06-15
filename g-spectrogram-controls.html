@@ -1,7 +1,7 @@
 <link rel="import" href="./bower_components/polymer/polymer.html">
 
 
-<polymer-element name="g-spectrogram-controls" attributes="log labels ticks speed color">
+<polymer-element name="g-spectrogram-controls" attributes="log labels ticks speed color minFreq maxFreq">
   <template>
     <style>
       :host {
@@ -39,8 +39,16 @@
       <input type="range" id="speed" value="{{speed}}" min="1" max="5" />
     </div>
     <div class="config">
-    <label for="labels">Show labels</label>
-    <input type="checkbox" id="labels" checked="{{labels}}">
+      <label for="labels">Show labels</label>
+      <input type="checkbox" id="labels" checked="{{labels}}">
+    </div>
+    <div class="config">
+      <label for="minFreq">Minimum Frequency</label>
+      <input type="range" id="minFreq" value="{{minFreq}}" min="0" max="20000">
+    </div>
+    <div class="config">
+      <label for="minFreq">Maximum Frequency</label>
+      <input type="range" id="maxFreq" value="{{maxFreq}}" min="0" max="20000">
     </div>
     <template if="{{labels}}">
       <div class="config">

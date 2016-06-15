@@ -1,5 +1,9 @@
 // Assumes context is an AudioContext defined outside of this class.
 
+function rerender() {
+  console.log("rerender");
+  if (this.labels) this.renderAxesLabels();
+}
 Polymer('g-spectrogram', {
   // Show the controls UI.
   controls: false,
@@ -7,7 +11,9 @@ Polymer('g-spectrogram', {
   log: false,
   // Show axis labels, and how many ticks.
   labels: false,
-  ticks: 5,
+  minFreq: 50,
+  maxFreq: 16000,
+  ticks: 10,
   speed: 2,
   // FFT bin size,
   fftsize: 2048,
@@ -31,6 +37,7 @@ Polymer('g-spectrogram', {
                            this.onStream.bind(this),
                            this.onStreamError.bind(this));
     this.ctx = this.$.canvas.getContext('2d');
+    window.spectrogram = this;
   },
 
   render: function() {
@@ -81,10 +88,12 @@ Polymer('g-spectrogram', {
       this.ctx.fillRect(i * barWidth, offset, 1, 1);
     }
   },
+  freqData: null,
 
   renderFreqDomain: function() {
-    var freq = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteFrequencyData(freq);
+    if(this.freqData === null) 
+      this.freqData = new Uint8Array(this.analyser.frequencyBinCount);
+    this.analyser.getByteFrequencyData(this.freqData);
 
     var ctx = this.ctx;
     // Copy the current canvas onto the temp canvas.
@@ -94,25 +103,26 @@ Polymer('g-spectrogram', {
     var tempCtx = this.tempCanvas.getContext('2d');
     tempCtx.drawImage(this.$.canvas, 0, 0, this.width, this.height);
 
+    var minIndex = this.freqToIndex(+this.minFreq);
+    var maxIndex = this.freqToIndex(+this.maxFreq);
     // Iterate over the frequencies.
-    for (var i = 0; i < freq.length; i++) {
+    for (var i = minIndex; i < maxIndex; i++) {
       var value;
-      // Draw each pixel with the specific color.
+      var index = i;
+      // Draw each pixel with the specific color
       if (this.log) {
-        logIndex = this.logScale(i, freq.length);
-        value = freq[logIndex];
-      } else {
-        value = freq[i];
+        index = this.logScale(i, maxIndex);
       }
+      value = this.freqData[index];
 
       ctx.fillStyle = (this.color ? this.getFullColor(value) : this.getGrayColor(value));
 
-      var percent = i / freq.length;
+      var percent = (i - minIndex) / (maxIndex - minIndex);
       var y = Math.round(percent * this.height);
 
       // draw the line at the right side of the canvas
-      ctx.fillRect(this.width - this.speed, this.height - y,
-                   this.speed, this.speed);
+      ctx.fillRect(this.width - this.speed, 0,
+                   this.speed, this.height - y);
     }
 
     // Translate the canvas.
@@ -145,26 +155,27 @@ Polymer('g-spectrogram', {
     canvas.width = this.width;
     canvas.height = this.height;
     var ctx = canvas.getContext('2d');
-    var startFreq = 440;
+    var startFreq = +this.minFreq;
     var nyquist = context.sampleRate/2;
-    var endFreq = nyquist - startFreq;
+    var endFreq = +this.maxFreq;
     var step = (endFreq - startFreq) / this.ticks;
+    var minIndex = this.freqToIndex(+this.minFreq);
+    var maxIndex = this.freqToIndex(+this.maxFreq);
     var yLabelOffset = 5;
     // Render the vertical frequency axis.
     for (var i = 0; i <= this.ticks; i++) {
       var freq = startFreq + (step * i);
       // Get the y coordinate from the current label.
       var index = this.freqToIndex(freq);
-      var percent = index / this.getFFTBinCount();
+      var percent = (index - minIndex) / (maxIndex - minIndex);
       var y = (1-percent) * this.height;
       var x = this.width - 60;
       // Get the value for the current y coordinate.
       var label;
       if (this.log) {
         // Handle a logarithmic scale.
-        var logIndex = this.logScale(index, this.getFFTBinCount());
-        // Never show 0 Hz.
-        freq = Math.max(1, this.indexToFreq(logIndex));
+        var logIndex = this.logScale(index, maxIndex);
+        freq = this.indexToFreq(logIndex);
       }
       var label = this.formatFreq(freq);
       var units = this.formatUnits(freq);
@@ -191,7 +202,7 @@ Polymer('g-spectrogram', {
   },
 
   formatUnits: function(freq) {
-    return (freq >= 1000 ? 'KHz' : 'Hz');
+    return (freq >= 1000 ? 'kHz' : 'Hz');
   },
 
   indexToFreq: function(index) {
@@ -201,7 +212,7 @@ Polymer('g-spectrogram', {
 
   freqToIndex: function(frequency) {
     var nyquist = context.sampleRate/2;
-    return Math.round(frequency/nyquist * this.getFFTBinCount());
+    return Math.round(Math.min(1, Math.max(0, frequency/nyquist)) * this.getFFTBinCount());
   },
 
   getFFTBinCount: function() {
@@ -231,26 +242,26 @@ Polymer('g-spectrogram', {
     return 'rgb(V, V, V)'.replace(/V/g, 255 - value);
   },
 
+
   getFullColor: function(value) {
-    var fromH = 62;
-    var toH = 0;
-    var percent = value / 255;
-    var delta = percent * (toH - fromH);
-    var hue = fromH + delta;
+    var fromH = 0;
+    var toH = 240;
+    var percent = 1 - value / 255;
+    var hue = fromH + percent * (toH - fromH);
     return 'hsl(H, 100%, 50%)'.replace(/H/g, hue);
   },
-  
-  logChanged: function() {
-    if (this.labels) {
-      this.renderAxesLabels();
-    }
-  },
 
-  ticksChanged: function() {
-    if (this.labels) {
-      this.renderAxesLabels();
-    }
+  
+  logChanged: rerender,
+  minFreqChanged: function(val) {
+    if(+val > this.maxFreq) this.maxFreq = +val + 10;
+    rerender.call(this);
   },
+  maxFreqChanged: function(val) {
+    if(+val < this.minFreq) this.minFreq = +val - 10;
+    rerender.call(this);
+  },
+  ticksChanged: rerender,
 
   labelsChanged: function() {
     if (this.labels) {
