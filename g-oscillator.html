@@ -1,7 +1,7 @@
 <link rel="import" href="./bower_components/polymer/polymer.html">
 <link href='https://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'>
 
-<polymer-element name="g-oscillator" attributes="log speed minFreq maxFreq">
+<polymer-element name="g-oscillator" attributes="log speed minFreq maxFreq fftsize">
   <template>
   <style>
     canvas {
@@ -28,6 +28,7 @@ Polymer('g-oscillator', {
   speed: 2,
   minFreq: 0,
   maxFreq: 1000,
+  fftsize: 0,
 
   fadeTime: 0.01,
 
@@ -168,11 +169,16 @@ Polymer('g-oscillator', {
     // Linearly divide the Y axis and assign frequency.
     var percent = 1 - (y / this.height);
     var nyquist = context.sampleRate/2;
+    var minIndex = this.freqToIndex(+this.minFreq);
+    var maxIndex = this.freqToIndex(+this.maxFreq);
     if (this.log) {
-      percent = this.logScale_(percent * 1000, 1000) / 1000;
-    }
-    console.log(this.minFreq, this.maxFreq, percent);
-    return percent * (+this.maxFreq - +this.minFreq) + +this.minFreq;
+      return this.logScale_(minIndex + percent * (maxIndex - minIndex), maxIndex) / 
+        (this.fftsize / 2) * nyquist;
+    } else return percent * (+this.maxFreq - +this.minFreq) + +this.minFreq;
+  },
+  freqToIndex: function(frequency) {
+    var nyquist = context.sampleRate/2;
+    return Math.round(Math.min(1, Math.max(0, frequency/nyquist)) * this.fftsize/2);
   },
 
   createOscillator_: function() {
