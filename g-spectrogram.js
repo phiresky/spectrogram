@@ -232,6 +232,9 @@ Polymer('g-spectrogram', {
     input.connect(analyser);
 
     this.analyser = analyser;
+
+    // store reference to input to prevent firefox from incorrectly garbage collecting it
+    this.input = input;
     // Setup a timer to visualize some stuff.
     this.render();
   },
